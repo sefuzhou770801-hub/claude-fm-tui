@@ -1,17 +1,23 @@
-# Claude FM TUI
+# Claude FM（终端内播放）
 
-从 [MovieBox-Tui](https://github.com/mesamirh/MovieBox-Tui) fork 改造：只做一件事——在终端收听 [Claude FM](https://www.youtube.com/live/tRsQsTMvPNg) 直播。
+从 [MovieBox-Tui](https://github.com/mesamirh/MovieBox-Tui) fork 改造：只做一件事——在**当前终端窗口里**播放 [Claude FM](https://www.youtube.com/live/tRsQsTMvPNg) 直播（有声有画）。
 
-Claude FM 是 Anthropic 的 24 小时直播电台，定位 *music for thinking and building*。
+## 原理
+
+用 `mpv` 的终端视频输出，把画面直接画进你正在用的终端：
+
+| 后端 | 适用终端 | 画质 |
+|------|----------|------|
+| `kitty` | Ghostty、WezTerm、Kitty | 高（图形协议） |
+| `tct` | iTerm2、Terminal.app、多数真彩色终端 | 中（彩色字符块） |
+
+声音走系统音频，画面留在终端。
 
 ## 依赖
 
-任选一条播放链路：
-
-| 优先级 | 需要 | 说明 |
-|--------|------|------|
-| 1 | [`mpv`](https://mpv.io)（自带 yt-dlp 支持） | `brew install mpv` |
-| 2 | `yt-dlp` + `ffplay`（ffmpeg） | macOS 通常已有 ffmpeg；再装 `brew install yt-dlp` |
+```sh
+brew install mpv   # 自带 yt-dlp 支持
+```
 
 ## 安装与运行
 
@@ -20,30 +26,30 @@ cargo install --path .
 claudefm
 ```
 
-或直接：
-
-```sh
-cargo run --release
-# 产物：./target/release/claudefm
-```
-
-## 操作
+## 操作（mpv 快捷键）
 
 | 按键 | 作用 |
 |------|------|
-| `Enter` / `Space` | 播放 / 停止 |
-| `r` | 重新连接直播 |
-| `q` / `Esc` | 退出 |
+| `q` | 退出 |
+| `f` | 全屏（终端内） |
+| `9` / `0` | 音量减 / 加 |
+| `m` | 静音 |
+| `SPACE` | 暂停 |
 
-启动后若检测到播放器，会自动开始播放 Claude FM。
+## 强制指定渲染后端
+
+```sh
+CLAUDEFM_VO=kitty claudefm
+CLAUDEFM_VO=tct claudefm
+```
+
+若某终端里画面花屏/空白，换另一个后端试试。
 
 ## 固定源
 
 ```
 https://www.youtube.com/live/tRsQsTMvPNg
 ```
-
-本项目不搜索、不选片，只播这一路直播。
 
 ## 许可
 

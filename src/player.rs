@@ -1,210 +1,126 @@
-//! 播放后端：优先 mpv（自带 ytdl），否则 yt-dlp 管道喂给 ffplay。
+//! 终端内播放：mpv 用 kitty / tct 把画面画在当前终端，声音走系统音频。
 
-use std::io;
-use std::process::{Child, Command, Stdio};
+use std::env;
+use std::io::{self, Write};
+use std::process::{Command, Stdio};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PlayerBackend {
-    Mpv,
-    Ffplay,
-    Missing,
-}
+/// Claude FM 直播地址
+pub const CLAUDE_FM_URL: &str = "https://www.youtube.com/live/tRsQsTMvPNg";
 
-impl PlayerBackend {
-    pub fn detect() -> Self {
-        if command_exists("mpv") {
-            Self::Mpv
-        } else if command_exists("ffplay") && command_exists("yt-dlp") {
-            Self::Ffplay
-        } else if command_exists("ffplay") {
-            // 没有 yt-dlp 时仍尝试让 ffplay 直接打开 URL（多数情况对 YouTube 无效）
-            Self::Ffplay
-        } else {
-            Self::Missing
-        }
-    }
-
-    pub fn label(&self) -> &'static str {
-        match self {
-            Self::Mpv => "mpv + yt-dlp",
-            Self::Ffplay => "yt-dlp | ffplay",
-            Self::Missing => "未检测到播放器",
-        }
-    }
-}
-
+/// 终端视频输出后端
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlayerStatus {
-    Idle,
-    Starting,
-    Playing,
-    Exited,
-    Failed,
+pub enum TerminalVo {
+    /// Kitty 图形协议（Ghostty / WezTerm / Kitty 画质最好）
+    Kitty,
+    /// True-color 字符块（通用，多数终端可用）
+    Tct,
 }
 
-pub struct Player {
-    url: String,
-    backend: PlayerBackend,
-    child: Option<Child>,
-    /// ffplay 管道模式下还要保留 yt-dlp 子进程
-    feeder: Option<Child>,
-    last_status: PlayerStatus,
-}
-
-impl Player {
-    pub fn new(url: String, backend: PlayerBackend) -> Self {
-        Self {
-            url,
-            backend,
-            child: None,
-            feeder: None,
-            last_status: PlayerStatus::Idle,
+impl TerminalVo {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Kitty => "kitty",
+            Self::Tct => "tct",
         }
     }
 
-    pub fn start(&mut self) -> io::Result<()> {
-        self.stop();
-
-        match self.backend {
-            PlayerBackend::Missing => {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "mpv 与 ffplay 均不可用",
-                ));
-            }
-            PlayerBackend::Mpv => {
-                // mpv 内置 ytdl：有声有画，独立窗口播放 YouTube 直播
-                let child = Command::new("mpv")
-                    .args([
-                        "--force-window=yes",
-                        "--keep-open=no",
-                        "--ytdl-format=bestvideo+bestaudio/best",
-                        "--title=Claude FM",
-                        "--really-quiet",
-                        &self.url,
-                    ])
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .spawn()?;
-                self.child = Some(child);
-            }
-            PlayerBackend::Ffplay => {
-                // yt-dlp 抽流 → ffplay 弹窗播放
-                if command_exists("yt-dlp") {
-                    let mut ytdlp = Command::new("yt-dlp")
-                        .args([
-                            "-f",
-                            "bestvideo+bestaudio/best",
-                            "-o",
-                            "-",
-                            "--quiet",
-                            "--no-warnings",
-                            &self.url,
-                        ])
-                        .stdin(Stdio::null())
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::null())
-                        .spawn()?;
-
-                    let stdout = ytdlp.stdout.take().ok_or_else(|| {
-                        io::Error::new(io::ErrorKind::Other, "无法连接 yt-dlp 输出管道")
-                    })?;
-
-                    let ffplay = Command::new("ffplay")
-                        .args([
-                            "-autoexit",
-                            "-window_title",
-                            "Claude FM",
-                            "-loglevel",
-                            "quiet",
-                            "-i",
-                            "pipe:0",
-                        ])
-                        .stdin(stdout)
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn()?;
-
-                    self.feeder = Some(ytdlp);
-                    self.child = Some(ffplay);
-                } else {
-                    let child = Command::new("ffplay")
-                        .args([
-                            "-autoexit",
-                            "-window_title",
-                            "Claude FM",
-                            "-loglevel",
-                            "quiet",
-                            &self.url,
-                        ])
-                        .stdin(Stdio::null())
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn()?;
-                    self.child = Some(child);
-                }
-            }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Kitty => "kitty 图形协议（终端内高清）",
+            Self::Tct => "tct 真彩色字符（通用终端）",
         }
-
-        self.last_status = PlayerStatus::Starting;
-        Ok(())
     }
 
-    pub fn stop(&mut self) {
-        if let Some(mut child) = self.child.take() {
-            let _ = child.kill();
-            let _ = child.wait();
+    /// 根据当前终端环境选 VO
+    pub fn detect() -> Self {
+        // 显式覆盖：CLAUDEFM_VO=kitty|tct
+        if let Ok(v) = env::var("CLAUDEFM_VO") {
+            match v.to_ascii_lowercase().as_str() {
+                "kitty" => return Self::Kitty,
+                "tct" | "ansi" | "ascii" => return Self::Tct,
+                _ => {}
+            }
         }
-        if let Some(mut feeder) = self.feeder.take() {
-            let _ = feeder.kill();
-            let _ = feeder.wait();
-        }
-        self.last_status = PlayerStatus::Idle;
-    }
 
-    pub fn status(&mut self) -> PlayerStatus {
-        let Some(child) = self.child.as_mut() else {
-            self.last_status = PlayerStatus::Idle;
-            return PlayerStatus::Idle;
-        };
-
-        match child.try_wait() {
-            Ok(None) => {
-                self.last_status = PlayerStatus::Playing;
-                PlayerStatus::Playing
-            }
-            Ok(Some(code)) => {
-                // 清理 feeder
-                if let Some(mut feeder) = self.feeder.take() {
-                    let _ = feeder.kill();
-                    let _ = feeder.wait();
-                }
-                self.child = None;
-                self.last_status = if code.success() {
-                    PlayerStatus::Exited
-                } else {
-                    PlayerStatus::Failed
-                };
-                self.last_status
-            }
-            Err(_) => {
-                self.child = None;
-                if let Some(mut feeder) = self.feeder.take() {
-                    let _ = feeder.kill();
-                    let _ = feeder.wait();
-                }
-                self.last_status = PlayerStatus::Failed;
-                PlayerStatus::Failed
-            }
+        if env::var_os("KITTY_WINDOW_ID").is_some() {
+            return Self::Kitty;
         }
+
+        let program = env::var("TERM_PROGRAM").unwrap_or_default();
+        let term = env::var("TERM").unwrap_or_default().to_ascii_lowercase();
+
+        // Ghostty / WezTerm / Kitty 支持 kitty 协议，效果明显好于 tct
+        match program.as_str() {
+            "ghostty" | "WezTerm" | "kitty" => return Self::Kitty,
+            // iTerm2 对 kitty 协议支持不完整，走 tct 更稳
+            "iTerm.app" | "Apple_Terminal" | "Orca" => return Self::Tct,
+            _ => {}
+        }
+
+        if term.contains("kitty") || term.contains("ghostty") || term.contains("wezterm") {
+            return Self::Kitty;
+        }
+
+        Self::Tct
     }
 }
 
-impl Drop for Player {
-    fn drop(&mut self) {
-        self.stop();
+pub fn mpv_available() -> bool {
+    command_exists("mpv")
+}
+
+/// 在当前终端前台播放（阻塞直到 mpv 退出）。画面直接画在本终端里。
+pub fn play_in_terminal(url: &str, vo: TerminalVo) -> io::Result<i32> {
+    if !mpv_available() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "未找到 mpv。请先执行：brew install mpv",
+        ));
     }
+
+    let mut cmd = Command::new("mpv");
+    cmd.arg(format!("--vo={}", vo.as_str()))
+        // 终端 VO 必须走软件渲染，避免抢 GPU 窗口
+        .arg("--hwdec=no")
+        .arg("--gpu-context=auto")
+        // 不要弹独立 GUI 窗口
+        .arg("--force-window=no")
+        .arg("--keep-open=no")
+        .arg("--ytdl-format=bestvideo+bestaudio/best")
+        .arg("--title=Claude FM")
+        // 少刷状态行，避免干扰画面；错误仍可见
+        .arg("--msg-level=all=error,ytdl_hook=status")
+        .arg("--really-quiet")
+        .arg(url);
+
+    // tct 专用：半块字符，密度更高
+    if vo == TerminalVo::Tct {
+        cmd.arg("--vo-tct-algo=half-blocks");
+        cmd.arg("--vo-tct-256=yes");
+    }
+
+    // 继承当前终端：stdin 给按键，stdout/stderr 画画面
+    cmd.stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    let status = cmd.status()?;
+    Ok(status.code().unwrap_or(1))
+}
+
+pub fn print_banner(vo: TerminalVo) {
+    let mut out = io::stderr();
+    let _ = writeln!(
+        out,
+        "\x1b[1;35mClaude FM\x1b[0m  ·  终端内播放  ·  vo={}\n\
+         \x1b[2m{}\x1b[0m\n\
+         \x1b[2m源 {}\x1b[0m\n\
+         \x1b[33m[q]\x1b[0m 退出  \x1b[33m[f]\x1b[0m 全屏  \x1b[33m[9/0]\x1b[0m 音量  \x1b[33m[m]\x1b[0m 静音\n\
+         \x1b[2m强制后端：CLAUDEFM_VO=kitty|tct\x1b[0m\n",
+        vo.as_str(),
+        vo.label(),
+        CLAUDE_FM_URL
+    );
 }
 
 fn command_exists(name: &str) -> bool {
