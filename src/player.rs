@@ -73,12 +73,12 @@ impl Player {
                 ));
             }
             PlayerBackend::Mpv => {
-                // mpv 内置 ytdl 钩子，直接吃 YouTube URL；直播优先音频以省带宽
+                // mpv 内置 ytdl：有声有画，独立窗口播放 YouTube 直播
                 let child = Command::new("mpv")
                     .args([
-                        "--no-video",
-                        "--force-window=no",
-                        "--ytdl-format=bestaudio/best",
+                        "--force-window=yes",
+                        "--keep-open=no",
+                        "--ytdl-format=bestvideo+bestaudio/best",
                         "--title=Claude FM",
                         "--really-quiet",
                         &self.url,
@@ -90,12 +90,12 @@ impl Player {
                 self.child = Some(child);
             }
             PlayerBackend::Ffplay => {
-                // yt-dlp 抽流 → ffplay 无界面播放（适合音乐台）
+                // yt-dlp 抽流 → ffplay 弹窗播放
                 if command_exists("yt-dlp") {
                     let mut ytdlp = Command::new("yt-dlp")
                         .args([
                             "-f",
-                            "bestaudio/best",
+                            "bestvideo+bestaudio/best",
                             "-o",
                             "-",
                             "--quiet",
@@ -113,8 +113,9 @@ impl Player {
 
                     let ffplay = Command::new("ffplay")
                         .args([
-                            "-nodisp",
                             "-autoexit",
+                            "-window_title",
+                            "Claude FM",
                             "-loglevel",
                             "quiet",
                             "-i",
@@ -128,9 +129,15 @@ impl Player {
                     self.feeder = Some(ytdlp);
                     self.child = Some(ffplay);
                 } else {
-                    // 退而求其次：直接喂 URL（对 YouTube 直播通常失败，但给出明确路径）
                     let child = Command::new("ffplay")
-                        .args(["-nodisp", "-autoexit", "-loglevel", "quiet", &self.url])
+                        .args([
+                            "-autoexit",
+                            "-window_title",
+                            "Claude FM",
+                            "-loglevel",
+                            "quiet",
+                            &self.url,
+                        ])
                         .stdin(Stdio::null())
                         .stdout(Stdio::null())
                         .stderr(Stdio::null())
