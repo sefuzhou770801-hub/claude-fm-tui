@@ -74,13 +74,6 @@ impl Vo {
         Self::Kitty
     }
 
-    fn name(self) -> &'static str {
-        match self {
-            Self::Kitty => "kitty",
-            Self::Tct => "tct",
-            Self::Gui => "gpu-next",
-        }
-    }
 }
 
 fn play(vo: Vo) -> io::Result<()> {
