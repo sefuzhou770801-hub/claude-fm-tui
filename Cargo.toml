@@ -1,8 +1,8 @@
 [package]
 name = "claude-fm-tui"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-description = "在终端窗口内播放 Claude FM 直播（mpv kitty/tct 渲染）。"
+description = "Claude Code 风格 TUI + 终端内 Claude FM 直播同屏播放。"
 repository = "https://github.com/sefuzhou770801-hub/claude-fm-tui"
 homepage = "https://github.com/sefuzhou770801-hub/claude-fm-tui"
 license = "MIT OR Apache-2.0"
@@ -15,5 +15,6 @@ rust-version = "1.85.0"
 name = "claudefm"
 path = "src/main.rs"
 
-# 终端内播放只依赖 mpv 子进程，无需 ratatui
 [dependencies]
+crossterm = "0.29.0"
+ratatui = "0.30.2"

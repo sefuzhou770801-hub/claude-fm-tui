@@ -1,60 +1,57 @@
-# Claude FM（终端内播放）
+# Claude FM
 
-从 [MovieBox-Tui](https://github.com/mesamirh/MovieBox-Tui) fork 改造：只做一件事——在**当前终端窗口里**播放 [Claude FM](https://www.youtube.com/live/tRsQsTMvPNg) 直播（有声有画）。
+从 [MovieBox-Tui](https://github.com/mesamirh/MovieBox-Tui) fork 改造：在终端里收听/收看 [Claude FM](https://www.youtube.com/live/tRsQsTMvPNg)，**控制面板与画面同屏**，面板为 Claude Code 风格。
 
-## 原理与清晰度
+## 布局
 
-用 `mpv` 把画面画进终端（或独立窗口）：
-
-| 模式 | 命令 | 画质 | 说明 |
-|------|------|------|------|
-| `kitty` | `claudefm --kitty`（默认优先） | **高** | 终端内真正位图，需 Ghostty / WezTerm / Kitty 等 |
-| `tct` | `claudefm --tct` | **低** | 每个字符一格色块，糊是物理限制，不是源糊 |
-| `gui` | `claudefm --gui` | **最高** | 独立 mpv 窗口，接近源站 1080p |
-
-直播源本身有 144p～1080p；默认优先拉 **1080p**。  
-若你觉得糊，先看启动时打印的 `vo=`：若是 `tct`，换现代终端或 `--gui`。
+```
+┌──────────────────────────────────────────┐
+│                                          │
+│         直播画面（kitty 位图）              │  ← 上半
+│                                          │
+├──────────────────────────────────────────┤
+│  ● Claude FM  /split                     │
+│  status · playing · 波形                 │  ← 下半 TUI
+│  session · source · note                 │     Claude Code 暖橙风格
+│  [space] 播放/暂停  [g] 窗口  [q] 退出     │
+└──────────────────────────────────────────┘
+```
 
 ## 依赖
 
 ```sh
-brew install mpv   # 自带 yt-dlp 支持
+brew install mpv
 ```
 
-## 安装与运行
+分屏画面需要终端支持 **kitty 图形协议**（Ghostty、WezTerm、Kitty 等）。  
+不支持时用窗口模式：`claudefm --gui`。
+
+## 安装
 
 ```sh
 cargo install --path .
 claudefm
 ```
 
-## 操作（mpv 快捷键）
+## 模式
 
-| 按键 | 作用 |
+| 命令 | 效果 |
 |------|------|
+| `claudefm` | 上半画面 + 下半 TUI（默认） |
+| `claudefm --gui` | 独立 1080p 窗口 + TUI |
+| `claudefm --audio` | 仅音频 + TUI |
+
+## 快捷键
+
+| 键 | 作用 |
+|----|------|
+| `space` / `Enter` | 播放 / 暂停 |
+| `s` | 停止 |
+| `r` | 重连 |
+| `g` | 切到独立窗口 |
+| `k` | 切回终端分屏 |
 | `q` | 退出 |
-| `f` | 全屏（终端内） |
-| `9` / `0` | 音量减 / 加 |
-| `m` | 静音 |
-| `SPACE` | 暂停 |
-
-## 指定渲染后端
-
-```sh
-claudefm --kitty          # 终端内高清（推荐）
-claudefm --tct            # 兼容模式（会糊）
-claudefm --gui            # 独立窗口 1080p
-CLAUDEFM_VO=gui claudefm  # 环境变量写法
-```
-
-花屏/空白时依次试：`--kitty` → `--tct` → `--gui`。
-
-## 固定源
-
-```
-https://www.youtube.com/live/tRsQsTMvPNg
-```
 
 ## 许可
 
-沿用上游：MIT OR Apache-2.0。
+MIT OR Apache-2.0。
