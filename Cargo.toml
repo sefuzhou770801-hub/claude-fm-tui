@@ -1,12 +1,12 @@
 [package]
 name = "claude-fm-tui"
-version = "0.3.0"
+version = "1.0.0"
 edition = "2021"
-description = "Claude Code 风格 TUI + 终端内 Claude FM 直播同屏播放。"
+description = "在终端全屏播放 Claude FM 直播（效果接近浏览器内播放）。"
 repository = "https://github.com/sefuzhou770801-hub/claude-fm-tui"
 homepage = "https://github.com/sefuzhou770801-hub/claude-fm-tui"
 license = "MIT OR Apache-2.0"
-keywords = ["tui", "claude", "music", "youtube", "cli"]
+keywords = ["claude", "music", "youtube", "mpv", "terminal"]
 categories = ["command-line-utilities", "multimedia"]
 readme = "README.md"
 rust-version = "1.85.0"
@@ -16,5 +16,3 @@ name = "claudefm"
 path = "src/main.rs"
 
 [dependencies]
-crossterm = "0.29.0"
-ratatui = "0.30.2"
