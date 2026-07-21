@@ -63,7 +63,7 @@ fn draw_header(frame: &mut Frame, area: Rect, view: &AppView) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Rgb(137, 180, 250)))
             .title(Span::styled(
-                " claudfm ",
+                " claudefm ",
                 Style::default().fg(Color::Rgb(137, 180, 250)),
             )),
     )

@@ -17,14 +17,14 @@ Claude FM 是 Anthropic 的 24 小时直播电台，定位 *music for thinking a
 
 ```sh
 cargo install --path .
-claudfm
+claudefm
 ```
 
 或直接：
 
 ```sh
 cargo run --release
-# 产物：./target/release/claudfm
+# 产物：./target/release/claudefm
 ```
 
 ## 操作
