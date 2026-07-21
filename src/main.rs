@@ -1,17 +1,23 @@
-//! Claude FM — 在当前终端窗口内播放 Anthropic Claude FM 直播（有声有画）。
-//!
-//! 画面由 mpv 的终端渲染输出（kitty 协议或 tct 真彩色字符）直接画在本终端。
+//! Claude FM — 终端内（或独立窗口）播放 Anthropic Claude FM 直播。
 
 mod player;
 
+use std::env;
 use std::io;
 use std::process::ExitCode;
 
-use player::{play_in_terminal, print_banner, TerminalVo, CLAUDE_FM_URL};
+use player::{play, print_banner, print_help, VideoMode, CLAUDE_FM_URL};
 
 fn main() -> ExitCode {
-    match run() {
-        Ok(code) => ExitCode::from(code as u8),
+    let args: Vec<String> = env::args().skip(1).collect();
+
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        print_help();
+        return ExitCode::SUCCESS;
+    }
+
+    match run(&args) {
+        Ok(code) => ExitCode::from(code.min(255) as u8),
         Err(err) => {
             eprintln!("claudefm 失败：{err}");
             ExitCode::FAILURE
@@ -19,11 +25,8 @@ fn main() -> ExitCode {
     }
 }
 
-fn run() -> io::Result<i32> {
-    let vo = TerminalVo::detect();
-    print_banner(vo);
-
-    // 前台占用当前终端：视频帧画在这里，q 退出 mpv 后本程序结束
-    let code = play_in_terminal(CLAUDE_FM_URL, vo)?;
-    Ok(code)
+fn run(args: &[String]) -> io::Result<i32> {
+    let mode = VideoMode::resolve(args);
+    print_banner(mode);
+    play(CLAUDE_FM_URL, mode)
 }
