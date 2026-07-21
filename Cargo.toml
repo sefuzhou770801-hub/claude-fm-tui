@@ -1,37 +1,20 @@
 [package]
-name = "moviebox-tui"
-version = "0.1.2"
-edition = "2024"
-description = "A terminal user interface (TUI) client for MovieBox API."
-repository = "https://github.com/mesamirh/MovieBox-Tui"
-homepage = "https://github.com/mesamirh/MovieBox-Tui"
+name = "claude-fm-tui"
+version = "0.1.0"
+edition = "2021"
+description = "Terminal player for Claude FM — live music for thinking and building."
+repository = "https://github.com/sefuzhou770801-hub/MovieBox-Tui"
+homepage = "https://github.com/sefuzhou770801-hub/MovieBox-Tui"
 license = "MIT OR Apache-2.0"
-keywords = ["tui", "moviebox", "scraper", "streaming", "cli"]
+keywords = ["tui", "claude", "music", "youtube", "cli"]
 categories = ["command-line-utilities", "multimedia"]
 readme = "README.md"
 rust-version = "1.85.0"
 
+[[bin]]
+name = "claude-fm"
+path = "src/main.rs"
+
 [dependencies]
-arboard = "3.6.1"
-base64 = "0.22.1"
 crossterm = "0.29.0"
-dirs = "6.0.0"
-hmac = "0.13.0"
-image = "0.25.10"
-lru = "0.18.1"
-md-5 = "0.11.0"
-rand = "0.10.2"
 ratatui = "0.30.2"
-ratatui-image = "11.0.6"
-reqwest = { version = "0.13.4", features = ["json"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
-thiserror = "2.0.18"
-tokio = { version = "1.52.3", features = ["full"] }
-update-informer = "1.3.0"
-url = "2.5.8"
-
-[lib]
-name = "moviebox_tui"
-path = "src/lib.rs"
-

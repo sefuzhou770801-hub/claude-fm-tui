@@ -1,59 +1,49 @@
-# MovieBox-Tui
+# Claude FM TUI
 
-A lightning fast, zero-config terminal user interface (TUI) for streaming movies and TV series directly from your terminal.
+从 [MovieBox-Tui](https://github.com/mesamirh/MovieBox-Tui) fork 改造：只做一件事——在终端收听 [Claude FM](https://www.youtube.com/live/tRsQsTMvPNg) 直播。
 
-## Installation
+Claude FM 是 Anthropic 的 24 小时直播电台，定位 *music for thinking and building*。
+
+## 依赖
+
+任选一条播放链路：
+
+| 优先级 | 需要 | 说明 |
+|--------|------|------|
+| 1 | [`mpv`](https://mpv.io)（自带 yt-dlp 支持） | `brew install mpv` |
+| 2 | `yt-dlp` + `ffplay`（ffmpeg） | macOS 通常已有 ffmpeg；再装 `brew install yt-dlp` |
+
+## 安装与运行
 
 ```sh
-cargo install moviebox-tui
+cargo install --path .
+claude-fm
 ```
 
-*Note: Requires `mpv` installed on your system for video playback.*
-
-## Usage
-
-Launch the app from your terminal:
+或直接：
 
 ```sh
-moviebox-tui
+cargo run --release
 ```
 
-- **Search**: Press `/` to search for movies or shows.
-- **Play**: Select a result and press `Enter` to stream instantly.
-- **Logs**: Press `Ctrl+L` to view internal network logs.
-- **Quit**: Press `q` or `Esc` to exit.
+## 操作
 
-## Features
+| 按键 | 作用 |
+|------|------|
+| `Enter` / `Space` | 播放 / 停止 |
+| `r` | 重新连接直播 |
+| `q` / `Esc` | 退出 |
 
-- Instant streaming with `mpv`
-- Full metadata (seasons, episodes, dubs, and subs)
-- Built in geo-unblocking (zero VPN required)
-- Copy direct stream URLs to clipboard
+启动后若检测到播放器，会自动开始播放 Claude FM。
 
-## Screenshots
+## 固定源
 
-<details>
-<summary>Click to view screenshots</summary>
+```
+https://www.youtube.com/live/tRsQsTMvPNg
+```
 
-<br>
+本项目不搜索、不选片，只播这一路直播。
 
-### Home Screen
-<img src="assets/screenshots/1-home.jpg" alt="Home Screen" width="800">
+## 许可
 
-### Search Results
-<img src="assets/screenshots/2-search.jpg" alt="Search Results" width="800">
-
-### Movie Details
-<img src="assets/screenshots/3-movie.jpg" alt="Movie Details" width="800">
-
-### Stream Selection
-<img src="assets/screenshots/4-streams.jpg" alt="Stream Selection" width="800">
-
-### TV Series Details
-<img src="assets/screenshots/5-series.jpg" alt="TV Series Details" width="800">
-
-</details>
-
-## License
-
-Dual-licensed under MIT or Apache-2.0.
+沿用上游：MIT OR Apache-2.0。
