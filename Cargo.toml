@@ -12,7 +12,7 @@ readme = "README.md"
 rust-version = "1.85.0"
 
 [[bin]]
-name = "claude-fm"
+name = "claudfm"
 path = "src/main.rs"
 
 [dependencies]
